@@ -157,6 +157,7 @@ cython_debug/
 
 kafka-data/
 .idea
+test-video/
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

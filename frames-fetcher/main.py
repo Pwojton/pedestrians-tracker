@@ -3,52 +3,85 @@ import cv2 as cv
 import sys
 from loguru import logger
 from dotenv import load_dotenv
-from confluent_kafka import Producer
+from confluent_kafka import Producer, KafkaException
 from camera_capture import CameraCapture
 
-logger.remove(0)
-logger.add(sys.stderr, format="{level} : {time} : {message}")
+
+def configure_logger():
+    """Configures the logger with a specific format."""
+    logger.remove(0)
+    logger.add(sys.stderr, format="{level} : {time} : {message}")
+
+
+def load_env_variables():
+    """Loads environment variables required for Kafka and camera configuration."""
+    load_dotenv()
+    camera_url = os.getenv("CAMERA_URL", "test-video/test1.mp4")  # Default to a test video
+    kafka_server = os.getenv("KAFKA_SERVER")
+    topic = os.getenv("TOPIC")
+    return camera_url, kafka_server, topic
+
+
+def configure_producer(kafka_server):
+    """Creates and returns a Kafka producer."""
+    return Producer({'bootstrap.servers': kafka_server})
 
 
 def delivery_report(err, msg):
-    if err is not None:
-        logger.error("Frame delivery failed")
-        return
-    logger.success('Frame successfully produced to topic "{}" [message partition {}] at offset {}'.format(
-         msg.topic(), msg.partition(), msg.offset()))
+    """Reports the status of frame delivery to Kafka."""
+    if err:
+        logger.error("Frame delivery failed: {}", err)
+    else:
+        logger.success(
+            f'Frame successfully produced to topic "{msg.topic()}" [partition {msg.partition()}] at offset {msg.offset()}')
+
+
+def process_frame(frame):
+    """Processes the frame before sending it to Kafka."""
+    return cv.convertScaleAbs(frame, alpha=1, beta=60)
+
+
+def encode_frame(frame):
+    """Encodes the frame to a JPEG format for transmission."""
+    success, encoded_frame = cv.imencode('.jpg', frame)
+    if success:
+        return encoded_frame.tobytes()
+    else:
+        logger.error("Frame encoding failed")
+        return None
 
 
 def main():
-    load_dotenv()
-    camera_url = os.getenv("CAMERA_URL")
-    kafka_server = os.getenv("KAFKA_SERVER")
-    topic = os.getenv("TOPIC")
+    configure_logger()
+    camera_url, kafka_server, topic = load_env_variables()
+    producer = configure_producer(kafka_server)
 
-    conf = {
-        'bootstrap.servers': kafka_server,
-    }
-    producer = Producer(conf)
+    # Initialize camera capture (use the default camera URL if none is provided)
     cap = CameraCapture(url=camera_url)
 
-    while True:
-        frame = cap.get_frame()
+    try:
+        while True:
+            frame = cap.get_frame()
 
-        if frame is None:
-            logger.error("Empty frame!")
-            cv.waitKey(1000)
-            continue
+            if frame is None:
+                logger.error("Empty frame received from camera!")
+                cv.waitKey(1000)  # Add a delay to avoid spamming
+                continue
 
-        frame = cv.convertScaleAbs(frame, alpha=1, beta=60)
-        success_encoded, encoded_frame = cv.imencode('.jpg', frame)
-        encoded_frame = encoded_frame.tobytes()
+            # Process and encode the frame
+            processed_frame = process_frame(frame)
+            encoded_frame = encode_frame(processed_frame)
 
-        if success_encoded:
-            producer.produce(topic=topic, value=encoded_frame, on_delivery=delivery_report)
-            producer.poll(0.1)
-        else:
-            logger.error("Frame encoding failed")
-
-    return
+            if encoded_frame:
+                producer.produce(topic=topic, value=encoded_frame, on_delivery=delivery_report)
+                producer.poll(0.1)  # Trigger any available delivery callbacks
+    except KafkaException as e:
+        logger.error(f"Kafka error occurred: {e}")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {e}")
+    finally:
+        producer.flush()
+        logger.info("Producer closed and resources released.")
 
 
 if __name__ == '__main__':
