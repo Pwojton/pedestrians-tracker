@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from confluent_kafka import Producer, KafkaException
 from camera_capture import CameraCapture
 
+import time
 
 def configure_logger():
     """Configures the logger with a specific format."""

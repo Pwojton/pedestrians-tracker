@@ -16,7 +16,7 @@ class CameraCapture:
         while True:
             if self.capture.isOpened():
                 (_, self.frame) = self.capture.read()
-            time.sleep(.035)
+            # time.sleep(.035)
 
     def get_frame(self):
         return self.frame
