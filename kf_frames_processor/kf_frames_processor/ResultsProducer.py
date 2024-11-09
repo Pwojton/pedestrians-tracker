@@ -8,7 +8,8 @@ class ResultsProducer:
     def __init__(self, topic):
         load_dotenv()
         self.topic = topic
-        self.producer = Producer({'bootstrap.servers': os.getenv("KAFKA_SERVER")})
+        # self.producer = Producer({'bootstrap.servers': os.getenv("KAFKA_SERVER")})
+        self.producer = Producer({'bootstrap.servers': 'localhost:9094'})
 
     def delivery_report(self, err, msg):
         """Reports the status of frame delivery to Kafka."""

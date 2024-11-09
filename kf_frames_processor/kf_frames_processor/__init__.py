@@ -2,7 +2,7 @@ import json
 import os
 import cv2 as cv
 import numpy as np
-from ResultsProducer import ResultsProducer
+from .ResultsProducer import ResultsProducer
 from confluent_kafka import Consumer, KafkaException
 from loguru import logger
 from dotenv import load_dotenv
@@ -12,7 +12,7 @@ class FramesProcessor:
     def __init__(self, model, producer_topic, group_id):
         load_dotenv()
         self.kafka_config = {
-            'bootstrap.servers': os.getenv("KAFKA_SERVER"),
+            'bootstrap.servers': 'localhost:9094',
             'group.id': group_id,
             'auto.offset.reset': 'earliest'
         }
@@ -85,3 +85,8 @@ class FramesProcessor:
             self.consumer.close()
             cv.destroyAllWindows()
             logger.info("Consumer closed and resources released.")
+
+
+__all__ = [
+    'FramesProcessor'
+]
