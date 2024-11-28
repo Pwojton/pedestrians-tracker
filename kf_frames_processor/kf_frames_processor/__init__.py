@@ -1,5 +1,4 @@
 import json
-import os
 import cv2 as cv
 import numpy as np
 from .ResultsProducer import ResultsProducer
@@ -42,10 +41,10 @@ class FramesProcessor:
         pred_classes = pred_results.cls.int().unsqueeze(dim=1).numpy()
 
         result = {
-            "frame_timestamp": frame_timestamp,
-            "score": pred_scores.tolist(),
-            "boxes": pred_boxes.tolist(),
-            "classes": pred_classes.tolist()
+            "frame_timestamp": frame_timestamp[1],
+            "score": [] if pred_scores is None else pred_scores.tolist(),
+            "boxes": [] if pred_boxes is None else pred_boxes.tolist(),
+            "classes": [] if pred_classes is None else pred_classes.tolist()
         }
 
         return result

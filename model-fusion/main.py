@@ -1,19 +1,15 @@
 import os
 import json
 import logging
-from ResultsProducer import ResultsProducer
-from confluent_kafka import Consumer, Producer, KafkaException
+import numpy as np
+from confluent_kafka import Consumer, KafkaException
 from dotenv import load_dotenv
-from collections import deque, defaultdict
+from ensemble_boxes import weighted_boxes_fusion
 
 load_dotenv()
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-results_store = defaultdict(lambda: None)
 
 
 def create_kafka_consumer(topic, group_id):
@@ -28,84 +24,78 @@ def create_kafka_consumer(topic, group_id):
     return consumer
 
 
-def create_kafka_producer():
-    return Producer({'bootstrap.servers': os.getenv("KAFKA_SERVER")})
+def flatten_data(data):
+    return [np.squeeze(sublist).tolist() for sublist in data]
 
 
-def process_message(message):
-    if message is None or message.error():
-        if message is not None:
-            raise KafkaException(message.error())
-        return None
+def normalize_boxes(boxes_list):
+    frame_width = 1920
+    frame_height = 1080
+    normalized_boxes = [
+        [
+            [
+                x_min / frame_width,
+                y_min / frame_height,
+                x_max / frame_width,
+                y_max / frame_height
+            ]
+            for (x_min, y_min, x_max, y_max) in box_group
+        ]
+        for box_group in boxes_list
+    ]
 
-    # Decode the message
-    decoded_message = message.value().decode("utf-8")
-    return json.loads(decoded_message)
-
-
-def non_max_suppression(result1, result2):
-    if result1['frame_timestamp'] == result2['frame_timestamp']:
-        return "Jest w pyte B)"
-    return "Gówno :("
-
-
-def process_queue(queue):
-    if not queue:
-        return None, None
-
-    result = queue.popleft()
-    result_id = result["frame_timestamp"][1]
-    matching_result = None
-
-    if result_id in results_store:
-        matching_result = results_store.pop(result_id)
-    else:
-        results_store[result_id] = result
-
-    if result and matching_result:
-        return result, matching_result
+    return normalized_boxes
 
 
-def integrate_queues(yolo_queue, rtdetr_queue):
-    process_queue(yolo_queue)  # faster queue
-    rtdetr_result, yolo_result = process_queue(rtdetr_queue)  # slower queue
+def revert_normalization(normalized_boxes):
+    frame_width = 1920
+    frame_height = 1080
+    original_boxes = [
+        [
+            x_min * frame_width,
+            y_min * frame_height,
+            x_max * frame_width,
+            y_max * frame_height
+        ]
+        for (x_min, y_min, x_max, y_max) in normalized_boxes
+    ]
+    return np.array(original_boxes, dtype=float)
 
-    if yolo_result and rtdetr_result:
-        return non_max_suppression(rtdetr_result, yolo_result)
 
+def model_fusion(result):
+    frame_width = 1920
+    frame_height = 1080
+    boxes_list = [result["YOLO_BOXES"], result["RTDETR_BOXES"]]
+    scores_list = [flatten_data(result["YOLO_SCORES"]), flatten_data(result["RTDETR_SCORES"])]
+    labels_list = [flatten_data(result["YOLO_CLASSES"]), flatten_data(result["RTDETR_CLASSES"])]
 
-def poll_consumer(consumer, queue):
-    messages = consumer.consume(num_messages=10, timeout=0)  # Batch processing
-    for message in messages:
-        try:
-            result = process_message(message)
-            if result:
-                queue.append(result)
-        except KafkaException as e:
-            logger.error(f"Kafka error: {e}")
-        except json.JSONDecodeError as e:
-            logger.error(f"Error decoding message: {e}")
+    boxes, scores, labels = weighted_boxes_fusion(normalize_boxes(boxes_list), scores_list, labels_list, iou_thr=0.5)
+    return boxes, scores, labels
 
 
 def main():
-    yolo_results_consumer = create_kafka_consumer(topic=os.getenv("YOLO_TOPIC"),
-                                                  group_id=os.getenv("YOLO_GROUP"))
-    rtdetr_results_consumer = create_kafka_consumer(topic=os.getenv("RT-DETR_TOPIC"),
-                                                    group_id=os.getenv("RT-DETR_GROUP"))
-    results_producer = ResultsProducer(os.getenv("RESULTS_PRODUCER_TOPIC"))
+    combined_results_consumer = create_kafka_consumer(os.getenv("COMBINED_RESULTS_TOPIC"),
+                                                      os.getenv("COMBINED_RESULTS_GROUP"))
+    try:
+        while True:
+            msg = combined_results_consumer.poll(0)
 
-    yolo_queue = deque()
-    rtdetr_queue = deque()
+            if msg is None:
+                continue
 
-    while True:
-        poll_consumer(yolo_results_consumer, yolo_queue)
-        poll_consumer(rtdetr_results_consumer, rtdetr_queue)
+            if msg.error():
+                logger.error(f"Consumer error: {msg.error()}")
+                continue
 
-        fusion_result = integrate_queues(yolo_queue, rtdetr_queue)
+            result = json.loads(msg.value().decode("utf-8"))
+            result_key = json.loads(msg.key().decode("utf-8"))
 
-        if fusion_result:
-            fusion_result = json.dumps(fusion_result).encode("utf-8")
-            results_producer.send_results(fusion_result)
+            boxes, scores, labels = model_fusion(result)
+
+            print(result_key, boxes, scores, labels)
+
+    except KafkaException as e:
+        logger.error(f"Kafka error occurred: {e}")
 
 
 if __name__ == '__main__':

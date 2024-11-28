@@ -1,7 +1,7 @@
 version: '1.0'
 services:
   kafka:
-    image: "bitnami/kafka:latest"
+    image: "bitnami/kafka"
     restart: unless-stopped
     container_name: kafka
     ports:
@@ -27,7 +27,6 @@ services:
       timeout: 10s
       retries: 10
       start_period: 5m
-
   kafka-ui:
     container_name: kafka-ui
     image: provectuslabs/kafka-ui:latest
@@ -37,3 +36,19 @@ services:
       DYNAMIC_CONFIG_ENABLED: "true"
       KAFKA_CLUSTERS_0_NAME: pedestrian-tracker
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+  ksql-database:
+    container_name: ksql-database
+    image: confluentinc/ksqldb-server
+    ports:
+      - 8088:8088
+    depends_on:
+      - kafka
+    environment:
+      KSQL_BOOTSTRAP_SERVERS: kafka:9092
+  ksqldb-cli:
+    image: confluentinc/ksqldb-cli
+    container_name: ksqldb-cli
+    depends_on:
+      - ksql-database
+    entrypoint: /bin/sh
+    tty: true

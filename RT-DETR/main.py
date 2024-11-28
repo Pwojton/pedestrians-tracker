@@ -7,7 +7,7 @@ load_dotenv()
 
 
 def main():
-    model = RTDETR('model/rtdetr-l.pt')
+    model = RTDETR('model/rtdetr-l-7300.pt')
     yolo_frames_processor = FramesProcessor(model=model, producer_topic=os.getenv("RT-DETR_TOPIC"),
                                             group_id=os.getenv("RT-DETR_GROUP"))
     yolo_frames_processor.run()
