@@ -63,8 +63,6 @@ def revert_normalization(normalized_boxes):
 
 
 def model_fusion(result):
-    frame_width = 1920
-    frame_height = 1080
     boxes_list = [result["YOLO_BOXES"], result["RTDETR_BOXES"]]
     scores_list = [flatten_data(result["YOLO_SCORES"]), flatten_data(result["RTDETR_SCORES"])]
     labels_list = [flatten_data(result["YOLO_CLASSES"]), flatten_data(result["RTDETR_CLASSES"])]
