@@ -16,8 +16,8 @@ def configure_logger():
 def load_env_variables():
     """Loads environment variables required for Kafka and camera configuration."""
     load_dotenv()
-    camera_url = os.getenv("CAMERA_URL")
-    # camera_url = "test-video/test1.mp4"  # Default to a test video
+    # camera_url = os.getenv("CAMERA_URL")
+    camera_url = "test-video/test1.mp4"  # Default to a test video
     kafka_server = os.getenv("KAFKA_SERVER")
     topic = os.getenv("TOPIC")
     return camera_url, kafka_server, topic

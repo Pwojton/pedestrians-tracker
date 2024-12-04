@@ -11,11 +11,11 @@ class FramesProcessor:
     def __init__(self, model, producer_topic, group_id):
         load_dotenv()
         self.kafka_config = {
-            'bootstrap.servers': 'localhost:9094',
+            'bootstrap.servers': 'localhost:9094',  # TODO: change for env variable
             'group.id': group_id,
             'auto.offset.reset': 'earliest'
         }
-        self.topic = 'frames'
+        self.topic = 'frames'  # TODO: change for env variable
         self.model = model
         self.consumer = self.create_kafka_consumer()
         self.producer = ResultsProducer(producer_topic)
@@ -34,7 +34,7 @@ class FramesProcessor:
 
     def process_frame(self, frame, frame_timestamp):
         """Processes the frame using the YOLO model and returns the annotated frame."""
-        pred_results = self.model(frame, conf=0.3)[0].boxes.cpu()  # predict by model
+        pred_results = self.model(frame, conf=0.5)[0].boxes.cpu()  # predict by model
 
         pred_scores = pred_results.conf.unsqueeze(dim=1).numpy()
         pred_boxes = pred_results.xyxy.numpy()
