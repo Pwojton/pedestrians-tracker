@@ -1,7 +1,8 @@
 import json
+import os
 import cv2 as cv
 import numpy as np
-from .ResultsProducer import ResultsProducer
+from pedestrians_tracker_utils import ResultsProducer
 from confluent_kafka import Consumer, KafkaException
 from loguru import logger
 from dotenv import load_dotenv
@@ -10,12 +11,13 @@ from dotenv import load_dotenv
 class FramesProcessor:
     def __init__(self, model, producer_topic, group_id):
         load_dotenv()
+        print()
         self.kafka_config = {
-            'bootstrap.servers': 'localhost:9094',  # TODO: change for env variable
+            'bootstrap.servers': "localhost:9094",
             'group.id': group_id,
             'auto.offset.reset': 'earliest'
         }
-        self.topic = 'frames'  # TODO: change for env variable
+        self.topic = "frames"
         self.model = model
         self.consumer = self.create_kafka_consumer()
         self.producer = ResultsProducer(producer_topic)
@@ -71,11 +73,6 @@ class FramesProcessor:
                     # serialize to send to kafka
                     serialized_frame = json.dumps(annotated_frame).encode("utf-8")
                     self.producer.send_results(serialized_frame)
-
-                    # cv.imshow('Received Frame', annotated_frame)
-
-                    if cv.waitKey(1) & 0xFF == ord('q'):
-                        break
                 else:
                     logger.error("Failed to decode the frame.")
         except KafkaException as e:

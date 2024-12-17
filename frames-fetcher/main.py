@@ -3,8 +3,9 @@ import cv2 as cv
 import sys
 from loguru import logger
 from dotenv import load_dotenv
-from confluent_kafka import Producer, KafkaException
+from confluent_kafka import KafkaException
 from camera_capture import CameraCapture
+from pedestrians_tracker_utils import ResultsProducer
 
 
 def configure_logger():
@@ -21,20 +22,6 @@ def load_env_variables():
     kafka_server = os.getenv("KAFKA_SERVER")
     topic = os.getenv("TOPIC")
     return camera_url, kafka_server, topic
-
-
-def configure_producer(kafka_server):
-    """Creates and returns a Kafka producer."""
-    return Producer({'bootstrap.servers': kafka_server})
-
-
-def delivery_report(err, msg):
-    """Reports the status of frame delivery to Kafka."""
-    if err:
-        logger.error("Frame delivery failed: {}", err)
-    else:
-        logger.success(
-            f'Frame successfully produced to topic "{msg.topic()}" [partition {msg.partition()}] at offset {msg.offset()}')
 
 
 def process_frame(frame):
@@ -55,11 +42,10 @@ def encode_frame(frame):
 def main():
     configure_logger()
     camera_url, kafka_server, topic = load_env_variables()
-    producer = configure_producer(kafka_server)
+    producer = ResultsProducer(topic)
 
     # Initialize camera capture (use the default camera URL if none is provided)
     cap = CameraCapture(url=camera_url)
-
     try:
         while True:
             frame = cap.get_frame()
@@ -74,14 +60,12 @@ def main():
             encoded_frame = encode_frame(processed_frame)
 
             if encoded_frame:
-                producer.produce(topic=topic, value=encoded_frame, on_delivery=delivery_report)
-                producer.poll(0.1)  # Trigger any available delivery callbacks
+                producer.send_results(encoded_frame)
     except KafkaException as e:
         logger.error(f"Kafka error occurred: {e}")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
     finally:
-        producer.flush()
         logger.info("Producer closed and resources released.")
 
 

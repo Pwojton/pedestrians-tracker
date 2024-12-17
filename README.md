@@ -1,5 +1,13 @@
 # Pedestrians tracker
 
+## About project
+This is my Master's thesis project where I created human 
+tracking system using multi-model fusion and distributed 
+processing.
+
+I ensembled results from YOLO and RT-DETR models utilizing 
+Weighted Box Fusion 
+
 
 ## Installation 
 ### frames-fetcher
