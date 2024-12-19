@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 class ResultsProducer:
     def __init__(self, topic):
-        load_dotenv()
+        load_dotenv('../../.env')
         self.topic = topic
         self.producer = Producer({'bootstrap.servers': os.getenv("KAFKA_SERVER")})
 
@@ -16,7 +16,7 @@ class ResultsProducer:
             logger.error("Results from topic {} delivery failed: {}", self.topic, err)
         else:
             logger.success(
-                f'Results successfully produced to topic "{msg.topic()}" [partition {msg.partition()}] at offset {msg.offset()}')
+                f'Results successfully produced to topic "{msg.frames_topic()}" [partition {msg.partition()}] at offset {msg.offset()}')
 
     def send_results(self, results):
         self.producer.produce(topic=self.topic, value=results, on_delivery=self.delivery_report)

@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 class FramesProcessor:
     def __init__(self, model, producer_topic, group_id):
-        load_dotenv()
+        load_dotenv('../../.env')
         print()
         self.kafka_config = {
             'bootstrap.servers': "localhost:9094",

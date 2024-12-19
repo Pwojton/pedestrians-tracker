@@ -158,6 +158,7 @@ cython_debug/
 kafka-data/
 .idea
 test-video/
+tracker/deep_sort
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

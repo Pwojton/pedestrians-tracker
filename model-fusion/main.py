@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from ensemble_boxes import weighted_boxes_fusion
 from pedestrians_tracker_utils import ResultsProducer
 
-load_dotenv()
+load_dotenv('../.env')
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

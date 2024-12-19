@@ -1,13 +1,15 @@
 import json
 import logging
 import torch
+import random
 import cv2 as cv
+from tracker import Tracker
 from pedestrians_tracker_utils import create_kafka_consumer
 from frames_utils import decode_frame, draw_predictions
 from confluent_kafka import KafkaException
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv('../.env')
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,8 +18,11 @@ logger = logging.getLogger(__name__)
 def main():
     torch.device(0)
     frames_buffer = {}
-    fusion_consumer = create_kafka_consumer("fusion-results", "tracker")
-    frames_consumer = create_kafka_consumer("frames", "tracker")
+    fusion_consumer = create_kafka_consumer("fusion-results", "tracker2")
+    frames_consumer = create_kafka_consumer("frames", "tracker2")
+
+    tracker = Tracker()
+    colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for j in range(10)]
 
     try:
         while True:
@@ -36,9 +41,10 @@ def main():
                 if fusion_result['key'] in frames_buffer:
                     frame = frames_buffer.pop(fusion_result['key'])
                     frame = decode_frame(frame)
-                    draw_predictions(frame=frame, boxes=fusion_result['boxes'], scores=fusion_result['scores'],
-                                     labels=fusion_result['labels'])
-                    cv.imshow("Decoded Frame", frame)
+
+                    # draw_predictions(frame=frame, )  # implement tracker
+
+                    # cv.imshow("Decoded Frame", frame)
 
                     if cv.waitKey(1) & 0xFF == ord('q'):
                         break

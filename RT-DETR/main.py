@@ -3,7 +3,7 @@ from ultralytics import RTDETR
 from dotenv import load_dotenv
 from kf_frames_processor import FramesProcessor
 
-load_dotenv()
+load_dotenv('../.env')
 
 
 def main():

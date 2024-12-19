@@ -8,5 +8,7 @@ setup(
         "confluent-kafka",
         "python-dotenv",
         "loguru",
+        "numpy",
+        "opencv-python"
     ],
 )
