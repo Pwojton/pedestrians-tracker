@@ -1,7 +1,7 @@
 import os
 from ultralytics import RTDETR
 from dotenv import load_dotenv
-from kf_frames_processor import FramesProcessor
+from pedestrians_tracker_utils import FramesProcessor
 
 load_dotenv('../.env')
 

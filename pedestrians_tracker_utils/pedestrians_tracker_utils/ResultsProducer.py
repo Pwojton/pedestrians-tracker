@@ -16,7 +16,8 @@ class ResultsProducer:
             logger.error("Results from topic {} delivery failed: {}", self.topic, err)
         else:
             logger.success(
-                f'Results successfully produced to topic "{msg.frames_topic()}" [partition {msg.partition()}] at offset {msg.offset()}')
+                f'Results successfully produced to topic "{self.topic}" [partition {msg.partition()}] at offset '
+                f'{msg.offset()}')
 
     def send_results(self, results):
         self.producer.produce(topic=self.topic, value=results, on_delivery=self.delivery_report)

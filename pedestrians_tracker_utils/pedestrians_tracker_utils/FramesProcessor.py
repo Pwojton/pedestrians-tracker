@@ -2,7 +2,7 @@ import json
 import os
 import cv2 as cv
 import numpy as np
-from ResultsProducer import ResultsProducer
+from .ResultsProducer import ResultsProducer
 from confluent_kafka import Consumer, KafkaException
 from loguru import logger
 from dotenv import load_dotenv

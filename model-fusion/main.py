@@ -3,27 +3,15 @@ import json
 import logging
 import torch
 from data_utils import flatten_data, normalize_boxes, revert_normalization
-from confluent_kafka import Consumer, KafkaException
+from confluent_kafka import KafkaException
 from dotenv import load_dotenv
 from ensemble_boxes import weighted_boxes_fusion
-from pedestrians_tracker_utils import ResultsProducer
+from pedestrians_tracker_utils import ResultsProducer, create_kafka_consumer
 
 load_dotenv('../.env')
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-def create_kafka_consumer(topic, group_id):
-    kafka_config = {
-        'bootstrap.servers': os.getenv("KAFKA_SERVER"),
-        'group.id': group_id,
-        'auto.offset.reset': 'earliest'
-    }
-
-    consumer = Consumer(kafka_config)
-    consumer.subscribe([topic])
-    return consumer
 
 
 def model_fusion(result):

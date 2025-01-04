@@ -1,11 +1,11 @@
 import json
 import logging
+import numpy as np
 import torch
-import random
 import cv2 as cv
-from tracker import Tracker
+from supervision import Detections, BoxAnnotator, LabelAnnotator, ColorPalette, ByteTrack
 from pedestrians_tracker_utils import create_kafka_consumer
-from frames_utils import decode_frame, draw_predictions
+from frames_utils import decode_frame
 from confluent_kafka import KafkaException
 from dotenv import load_dotenv
 
@@ -18,17 +18,18 @@ logger = logging.getLogger(__name__)
 def main():
     torch.device(0)
     frames_buffer = {}
-    fusion_consumer = create_kafka_consumer("fusion-results", "tracker2")
-    frames_consumer = create_kafka_consumer("frames", "tracker2")
+    fusion_consumer = create_kafka_consumer("fusion-results", "tracker")
+    frames_consumer = create_kafka_consumer("frames", "tracker")
 
-    tracker = Tracker()
-    colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for j in range(10)]
+    tracker = ByteTrack()
+
+    box_annotator = BoxAnnotator(color=ColorPalette.DEFAULT, thickness=2)
+    label_annotator = LabelAnnotator(color=ColorPalette.DEFAULT)
 
     try:
         while True:
             fusion_result_msg = fusion_consumer.poll(0)
             frames_msg = frames_consumer.poll(0.1)
-            print(frames_msg)
             if frames_msg and not frames_msg.error():
                 frame_timestamp = frames_msg.timestamp()[1]
                 frame_value = frames_msg.value()
@@ -41,11 +42,19 @@ def main():
                 if fusion_result['key'] in frames_buffer:
                     frame = frames_buffer.pop(fusion_result['key'])
                     frame = decode_frame(frame)
+                    detections = Detections(xyxy=np.asarray(fusion_result['boxes']),
+                                            confidence=np.asarray(fusion_result['scores']),
+                                            class_id=np.asarray(fusion_result["labels"], dtype=np.int32))
 
-                    # draw_predictions(frame=frame, )  # implement tracker
+                    detections = tracker.update_with_detections(detections)
 
-                    # cv.imshow("Decoded Frame", frame)
+                    labels = [f"#{tracker_id}" for tracker_id in detections.tracker_id]
 
+                    frame = box_annotator.annotate(detections=detections, scene=frame.copy())
+                    frame = label_annotator.annotate(detections=detections, scene=frame.copy(), labels=labels)
+
+                    cv.imshow("Decoded Frame", frame)
+                    cv.waitKey(200)
                     if cv.waitKey(1) & 0xFF == ord('q'):
                         break
                 else:
