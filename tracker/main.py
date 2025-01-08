@@ -28,6 +28,9 @@ def main():
 
     try:
         while True:
+            '''
+            Synchronization of topics contains frames and assembled results
+            '''
             fusion_result_msg = fusion_consumer.poll(0)
             frames_msg = frames_consumer.poll(0.1)
             if frames_msg and not frames_msg.error():
@@ -54,7 +57,7 @@ def main():
                     frame = label_annotator.annotate(detections=detections, scene=frame.copy(), labels=labels)
 
                     cv.imshow("Decoded Frame", frame)
-                    cv.waitKey(200)
+                    cv.waitKey(150)
                     if cv.waitKey(1) & 0xFF == ord('q'):
                         break
                 else:
