@@ -8,16 +8,14 @@ processing.
 I ensembled results from YOLO and RT-DETR models utilizing 
 Weighted Box Fusion 
 
+Dataset used to train models: 
+- https://universe.roboflow.com/magisterka-g7tqf/pedestrian-detector-ywj1e
 
-## Installation 
-### frames-fetcher
-1. ``cd frames-fetcher && pip install requirements.txt``
-2. Create ``.env`` file like this
-```
-CAMERA_URL=...
-KAFKA_SERVER=...
-TOPIC=...
-```
+## Project architecture
 
-### YOLO-consumer
-1. ``cd YOLO-consumer && pip install requirements.txt``
+![schema](./assets/schema.jpg)
+
+- frames-fetcher – fetches frames from the video stream and sends them to Kafka.
+- YOLO and RT-DETR – machine vision models that detect pedestrians.
+- model-fusion – ensembles detections from YOLO and RT-DETR.
+- tracker – receives fused detections, tracks objects, and displays results.
